@@ -181,7 +181,7 @@ const tx = (ws, o) => { if (ws.readyState === 1) ws.send(JSON.stringify(o)); };
 function broadcastOnline() {
   const all = [...conns.values()];
   const list = all.map(c => ({
-    u: c.user, name: db.users[c.user].name, live: c.live, title: c.title,
+    ...profile(c.user), u: c.user, name: db.users[c.user].displayName || db.users[c.user].name, live: c.live, title: c.title,
     viewers: all.filter(x => x.watching === c.user && x !== c).length
   }));
   all.forEach(c => tx(c, { t: 'online', list }));
