@@ -9,7 +9,7 @@ Baxberi is an Azerbaijani-language Node.js live streaming and social app using W
 - Editable profiles: avatar, cover, display name, bio, age, city, interests, status
 - Follows, profile visitors, emoji reactions, virtual gifts, and chat quiz prompts
 - Responsive small-screen layout
-- Supabase PostgreSQL persistence and Cloudflare R2 image uploads for production
+- Supabase PostgreSQL persistence and Supabase Storage image uploads for production
 - TURN REST credentials signed for one hour when `TURN_SECRET` is configured
 
 XP, levels, daily tasks, achievements, and leaderboards are intentionally excluded.
@@ -31,7 +31,7 @@ Recommended initial host: an always-on paid Render Node web service. `render.yam
 
 Use Supabase managed PostgreSQL for the durable relational store. Create a Supabase project and run [supabase-schema.sql](supabase-schema.sql) in its SQL Editor. In Project Settings → API Keys, copy the project URL and a server-side `sb_secret_...` key. Keep that key only in Render's environment settings; never add it to the browser or repository. The server sends the modern secret key in the `apikey` header only. A legacy `service_role` JWT is supported as a migration fallback. Supabase is deprecating legacy keys by the end of 2026, so use the new secret key for a fresh deployment. The Node server uses Supabase's REST interface, with no added npm dependencies. [Supabase API keys](https://supabase.com/docs/guides/getting-started/api-keys), [Postgres connection options](https://supabase.com/docs/guides/database/connecting-to-postgres).
 
-Create a Cloudflare R2 bucket for profile images. Enable a public custom domain on the bucket (for example, `images.example.com`) and create a scoped Cloudflare API token with R2 object read/write access. The app validates image signatures and size before uploading through Cloudflare's R2 object API. Set `R2_PUBLIC_URL` to the bucket's HTTPS custom domain. [Cloudflare R2 object upload](https://developers.cloudflare.com/api/resources/r2/subresources/buckets/subresources/objects/methods/upload/), [R2 public buckets and custom domains](https://developers.cloudflare.com/r2/buckets/public-buckets/).
+The same Supabase project stores profile photos. The SQL file creates a 2 MB public-read bucket named `baxberi-profiles`; writes are made only by the Node server using the private Supabase secret key. The app checks image signatures and size before storing PNG/JPEG/WEBP/GIF objects. Public read is intentional because profile photos are visible to other users.
 
 Configure coturn (or a managed TURN service) with the REST authentication secret. For coturn, enable `use-auth-secret` and set `static-auth-secret` to the same value as `TURN_SECRET`. The server provides per-user TURN credentials that expire after one hour. `TURN_URL` accepts comma-separated `turn:` and `turns:` endpoints. The public Google STUN endpoint remains configured as a fallback.
 
@@ -44,10 +44,7 @@ Set these in the Render service's Environment page. The Blueprint marks secrets 
 | `NODE_ENV` | `production` |
 | `SUPABASE_URL` | Your Supabase project URL |
 | `SUPABASE_SECRET_KEY` | Supabase `sb_secret_...` server key; keep private |
-| `CF_ACCOUNT_ID` | Cloudflare account ID |
-| `CF_R2_BUCKET` | R2 bucket name |
-| `CF_API_TOKEN` | Scoped R2 object read/write API token |
-| `R2_PUBLIC_URL` | HTTPS public custom domain for the bucket |
+| `SUPABASE_STORAGE_BUCKET` | Bucket created by the SQL script (`baxberi-profiles`) |
 | `TURN_URL` | Comma-separated TURN/TURNS endpoints |
 | `TURN_SECRET` | coturn shared secret; keep private |
 | `PORT` | Set automatically by Render |
@@ -60,7 +57,7 @@ The new Supabase schema stores accounts, sessions, follows, visitors, chats, gif
 
 ## Security and capacity notes
 
-- The Supabase service role secret is server-only; SQL enables row-level security and revokes public client roles.
+- The Supabase secret key is server-only; SQL enables row-level security and revokes public client roles.
 - Cookies are HttpOnly and SameSite=Lax; HTTPS enables Secure cookies. Login/registration have basic in-memory IP rate limits.
 - Upload size is capped at 2 MB and the byte signature must match PNG, JPEG, WEBP, or GIF. Upload moderation and image re-encoding are not included.
 - Age is limited to 13+ as profile input, not age verification.

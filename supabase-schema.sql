@@ -75,3 +75,11 @@ grant all on public.users, public.sessions, public.follows, public.visitors,
 grant usage, select on all sequences in schema public to service_role;
 revoke all on function public.trim_chat_history(text) from public, anon, authenticated;
 grant execute on function public.trim_chat_history(text) to service_role;
+
+-- Public read access is intentional for avatars and profile covers. Writes go
+-- only through the authenticated Node server using its server-side secret.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('baxberi-profiles', 'baxberi-profiles', true, 2097152,
+        array['image/png','image/jpeg','image/webp','image/gif'])
+on conflict (id) do update set public=true, file_size_limit=2097152,
+  allowed_mime_types=excluded.allowed_mime_types;
