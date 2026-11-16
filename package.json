@@ -4,7 +4,8 @@
   "description": "Sadə canlı yayım platforması: qeydiyyat, canlı yayım, izləmək və söhbət",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test"
   },
   "engines": {
     "node": ">=18"
